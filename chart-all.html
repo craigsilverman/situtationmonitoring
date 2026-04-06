@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Situation Monitoring Dashboards Breakdown</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: auto; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; font-size: 14px; background: white; color: #1a1a1a; }
+  .wrapper { max-width: 100%; padding: 12px 12px 24px; }
+  .header { margin-bottom: 16px; }
+  .header h1 { font-size: 20px; font-weight: 700; color: #0f172a; margin-bottom: 6px; }
+  .header p { font-size: 13px; color: #64748b; line-height: 1.5; max-width: 700px; }
+  .header p a { color: #2563eb; text-decoration: none; }
+  .header p a:hover { text-decoration: underline; }
+  .filter-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; align-items: center; }
+  .filter-label { font-size: 12px; color: #64748b; font-weight: 600; margin-right: 2px; }
+  .filter-sep { width: 1px; height: 20px; background: #e2e8f0; margin: 0 4px; }
+  .filter-btn { font-size: 12px; padding: 4px 10px; border: 1px solid #d1d5db; border-radius: 4px; background: white; cursor: pointer; color: #374151; transition: all 0.15s; }
+  .filter-btn:hover { border-color: #6366f1; color: #4f46e5; }
+  .filter-btn.active { background: #4f46e5; border-color: #4f46e5; color: white; }
+  .table-scroll { overflow-x: auto; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+  .sticky-header-clone { position: fixed; top: 0; left: 0; right: 0; z-index: 100; overflow: hidden; display: none; box-shadow: 0 2px 6px rgba(0,0,0,.25); }
+  .sticky-header-clone table { border-collapse: separate; border-spacing: 0; font-size: 13px; width: auto; }
+  table { width: 100%; border-collapse: separate; border-spacing: 0; background: white; font-size: 13px; }
+  thead th { background: #0f172a; color: #e2e8f0; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; padding: 10px 11px; text-align: left; white-space: nowrap; cursor: default; border-bottom: 2px solid #1e293b; }
+  thead th:first-child { min-width: 210px; }
+  tbody tr { border-bottom: 1px solid #f1f5f9; transition: background 0.1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: #f8faff !important; }
+  tbody tr.hidden { display: none; }
+  tbody tr.row-dim { opacity: .65; }
+  tbody tr.row-dim:hover { opacity: 1; }
+  td { padding: 9px 11px; vertical-align: middle; }
+  .tool-cell { min-width: 210px; }
+  .sbadge { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 3px; margin-bottom: 3px; letter-spacing: .03em; text-transform: uppercase; }
+  .sbadge-live  { background: #dcfce7; color: #166534; }
+  .sbadge-repo  { background: #e0e7ff; color: #3730a3; }
+  .sbadge-proto { background: #fef9c3; color: #854d0e; }
+  .sbadge-unk   { background: #f1f5f9; color: #64748b; }
+  .tool-name { font-weight: 600; color: #0f172a; display: block; margin-bottom: 1px; }
+  .tool-name a { color: inherit; text-decoration: none; }
+  .tool-name a:hover { color: #4f46e5; }
+  .tool-scope { font-size: 11px; color: #64748b; display: block; }
+  .best-for { font-size: 11px; color: #64748b; font-style: italic; margin-top: 2px; display: block; }
+  .badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 3px; white-space: nowrap; }
+  .badge-free    { background: #dcfce7; color: #166534; }
+  .badge-signup  { background: #fef9c3; color: #854d0e; }
+  .badge-paid    { background: #fee2e2; color: #991b1b; }
+  .badge-partial { background: #fef3c7; color: #92400e; }
+  .fresh-rt      { color: #16a34a; font-weight: 600; font-size: 12px; }
+  .fresh-delayed { color: #d97706; font-size: 12px; }
+  .icon { font-size: 14px; display: block; text-align: center; }
+  .icon-yes  { color: #16a34a; }
+  .icon-no   { color: #d1d5db; }
+  .icon-part { color: #d97706; }
+  .icon-unk  { color: #94a3b8; font-size: 12px; }
+  .trans-high { color: #16a34a; font-weight: 600; font-size: 12px; }
+  .trans-med  { color: #d97706; font-weight: 600; font-size: 12px; }
+  .trans-low  { color: #dc2626; font-weight: 600; font-size: 12px; }
+  .sources-cell { font-size: 11px; color: #475569; max-width: 200px; line-height: 1.4; }
+  [data-tip] { position: relative; cursor: help; }
+  [data-tip]::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); background: #1e293b; color: #f1f5f9; font-size: 11px; padding: 6px 9px; border-radius: 5px; white-space: normal; max-width: 260px; opacity: 0; pointer-events: none; transition: opacity 0.15s; z-index: 10; line-height: 1.4; text-align: left; }
+  [data-tip]:hover::after { opacity: 1; }
+  thead th[data-tip]::after { top: calc(100% + 4px); bottom: auto; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px; font-size: 11px; color: #64748b; align-items: center; }
+  .legend-item { display: flex; align-items: center; gap: 4px; }
+  .legend-swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+  .footnote { margin-top: 14px; font-size: 11px; color: #94a3b8; line-height: 1.6; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="header">
+    <h1>Situation Monitoring Dashboards Breakdown</h1>
+    <p>Hover over column headers and cells for additional detail. Note that dimmed rows have unclear status or are repo-only (self-hosted). “Cyber / Net” covers both cybersecurity threat tracking and internet disruption monitoring (IODA, OONI, Cloudflare Radar).</p>
+  </div>
+  <div class="filter-row">
+    <span class="filter-label">Show:</span>
+    <button class="filter-btn active" data-filter="all">All</button>
+    <div class="filter-sep"></div>
+    <span class="filter-label">Filter:</span>
+    <button class="filter-btn" data-filter="islive">Live tools only</button>
+    <button class="filter-btn" data-filter="free">Free, no/optional signup</button>
+    <button class="filter-btn" data-filter="global">Global scope</button>
+    <button class="filter-btn" data-filter="mideast">Middle East focus</button>
+    <button class="filter-btn" data-filter="opensource">Open source</button>
+    <button class="filter-btn" data-filter="api">Has RSS / API / embed</button>
+    <button class="filter-btn" data-filter="transparent">Sources named</button>
+    <button class="filter-btn" data-filter="conflict">Covers conflict data</button>
+  </div>
+  <div class="table-scroll">
+  <table id="chart">
+    <thead>
+      <tr>
+        <th>Tool</th>
+        <th data-tip="Whether core features are free and whether signup is required">Access</th>
+        <th data-tip="How quickly data updates">Freshness</th>
+        <th data-tip="Does the tool name its upstream sources? High = all named; Medium = partial; Low = count only or undisclosed">Sources</th>
+        <th data-tip="Named upstream data providers">Key data sources</th>
+        <th data-tip="Interactive map interface">Map</th>
+        <th data-tip="Tracks armed conflict events or casualties">Conflict</th>
+        <th data-tip="Live aircraft position tracking via ADS-B">Flights</th>
+        <th data-tip="Live vessel tracking via AIS">Maritime</th>
+        <th data-tip="Financial markets, commodities, or prediction market odds (Polymarket/Kalshi)">Markets</th>
+        <th data-tip="Explicit risk or threat level indicator">Threat score</th>
+        <th data-tip="Satellite imagery or satellite-detected data (e.g. fire hotspots)">Satellite</th>
+        <th data-tip="Cyber threat tracking or internet disruption monitoring (IODA, OONI, Cloudflare Radar)">Cyber / Net</th>
+        <th data-tip="Programmatic access: RSS feed, public API, or iframe embed">RSS/API/Embed</th>
+        <th data-tip="Source code publicly available">OSS</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr data-tags="free mideast islive transparent conflict">
+        <td class="tool-cell">
+          <span class="sbadge sbadge-live">live</span>
+          <span class="tool-name"><a href="https://bamqam.com/" target="_blank">Bamqam</a></span>
+          <span class="tool-scope">Middle East (CENTCOM)</span>
+          <span class="best-for">ADS-B, AIS, NOTAM, UKMTO; GPS jamming + SAM ring visualization; Middle East/CENTCOM</span>
+        </td>
+        <td><span class="badge badge-partial">Free, signup optional</span></td>
+        <td><span class="fresh-rt">Real-time</span></td>
+        <td><span class="trans-high" data-tip="All upstream sources named">High</span></td>
+        <td><span class="sources-cell" data-tip="ADS-B Live, AIS Live, NOTAM, UKMTO, satellite data, OSINT, Red Alert">ADS-B Live, AIS Live, NOTAM, UKMTO, satellite data, OSINT…</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+      </tr>
+      <tr data-tags="global islive conflict">
+        <td class="tool-cell">
+          <span class="sbadge sbadge-live">live</span>
+          <span class="tool-name"><a href="https://www.conflictly.app/" target="_blank">Conflictly</a></span>
+          <span class="tool-scope">global</span>
+          <span class="best-for">3D globe conflict radar; has pricing page</span>
+        </td>
+        <td><span class="badge badge-paid">Paid / freemium</span></td>
+        <td><span class="fresh-rt">Real-time</span></td>
+        <td><span class="trans-low" data-tip="Sources not disclosed or count-only">Low</span></td>
+        <td><span class="icon-unk" style="font-size:12px">?</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-unk">?</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+      </tr>
+      <tr data-tags="free islive transparent">
+        <td class="tool-cell">
+          <span class="sbadge sbadge-live">live</span>
+          <span class="tool-name"><a href="https://copy-over.com/" target="_blank">Copy, Over</a></span>
+          <span class="tool-scope">real-time</span>
+          <span class="best-for">Space/radio science education — out of scope for geopolitical OSINT</span>
+        </td>
+        <td><span class="badge badge-free">Free, no signup</span></td>
+        <td><span class="fresh-rt">Real-time</span></td>
+        <td><span class="trans-high" data-tip="All upstream sources named">High</span></td>
+        <td><span class="sources-cell" data-tip="NASA datasets, SETI signal data, satellite telemetry, SDR receiver feeds">NASA datasets, SETI signal data, satellite telemetry, SDR…</span></td>
+        <td><span class="icon icon-unk">?</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-unk">?</span></td>
+      </tr>
+      <tr data-tags="free global opensource islive transparent conflict">
+        <td class="tool-cell">
+          <span class="sbadge sbadge-live">live + repo</span>
+          <span class="tool-name"><a href="https://www.crucix.live/" target="_blank">Crucix</a></span>
+          <span class="tool-scope">global</span>
+          <span class="best-for">ACLED, GDELT, FIRMS, OpenSky, Cloudflare Radar + 6 more; global threat score; 15-min refresh</span>
+        </td>
+        <td><span class="badge badge-free">Free, no signup</span></td>
+        <td><span class="fresh-rt">Real-time</span><span style="color:#94a3b8;font-size:11px;display:block">(15-min sweeps)</span></td>
+        <td><span class="trans-high" data-tip="All upstream sources named">High</span></td>
+        <td><span class="sources-cell" data-tip="NASA FIRMS, OpenSky, ACLED, GDELT, FRED, EIA, Yahoo Finance, WHO, CISA-KEV, Cloudflare Radar">NASA FIRMS, OpenSky, ACLED, GDELT, FRED, EIA, Yahoo Finan…</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes" data-tip="https://github.com/calesthio/Crucix">✓</span></td>
+      </tr>
+      <tr data-tags="global islive conflict">
+        <td class="tool-cell">
+          <span class="sbadge sbadge-live">live</span>
+          <span class="tool-name"><a href="https://darkwireintel.org/dashboard" target="_blank">Darkwire</a></span>
+          <span class="tool-scope">global</span>
+          <span class="best-for">Geopolitical intel for prediction market traders; access-gated</span>
+        </td>
+        <td><span class="badge badge-paid">Paid / freemium</span></td>
+        <td><span class="icon-unk" style="font-size:12px">?</span></td>
+        <td><span class="trans-low" data-tip="Sources not disclosed or count-only">Low</span></td>
+        <td><span class="icon-unk" style="font-size:12px">?</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+      </tr>
+      <tr data-tags="global mideast islive conflict">
+        <td class="tool-cell">
+          <span class="sbadge sbadge-live">live</span>
+          <span class="tool-name"><a href="https://digitalembassy.net/" target="_blank">Digital Embassy</a></span>
+          <span class="tool-scope">global (China + Russia + world capitals)</span>
+          <span class="best-for">AI briefings from world capitals, 3× daily</span>
+        </td>
+        <td><span class="badge badge-free">Free, no signup</span></td>
+        <td><span class="fresh-delayed">3x daily (6am/12pm/6pm ET)</span></td>
+        <td><span class="trans-med" data-tip="Some sources named; others undisclosed">Medium</span></td>
+        <td><span class="sources-cell" data-tip="25,000+ sources from 20+ countries (diplomatic, political, economic news feeds)">25,000+ sources from 20+ countries (diplomatic, political…</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+      </tr>
+      <tr data-tags="mideast islive conflict">
+        <td class="tool-cell">
+          <span class="sbadge sbadge-live">live</span>
+          <span class="tool-name"><a href="https://www.eyeonintel.com/" target="_blank">EyeOnIntel</a></span>
+          <span class="tool-scope">Iran/Israel/Gaza, Ukraine, China/Taiwan</span>
+          <span class="best-for">Conflict probability charts via Polymarket; commercial</span>
+        </td>
+        <td><span class="badge badge-paid">Paid / freemium</span></td>
+        <td><span class="fresh-rt">Real-time</span></td>
+        <td><span class="trans-low" data-tip="Sources not disclosed or count-only">Low</span></td>
+        <td><span class="sources-cell" data-tip="X/Twitter, Polymarket, OSINT, news sources">X/Twitter, Polymarket, OSINT, news sources</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+      </tr>
+      <tr data-tags="free global opensource islive conflict">
+        <td class="tool-cell">
+          <span class="sbadge sbadge-live">live</span>
+          <span class="tool-name"><a href="https://rdumasia303.github.io/Gemini_Claude_Earth/" target="_blank">Gemini/Claude Earth</a></span>
+          <span class="tool-scope">global</span>
+          <span class="best-for">Sources undisclosed; geopolitical and conflict events on global map</span>
+        </td>
+        <td><span class="badge badge-free">Free, no signup</span></td>
+        <td><span class="fresh-rt">Real-time</span></td>
+        <td><span class="trans-low" data-tip="Sources not disclosed or count-only">Low</span></td>
+        <td><span class="icon-unk" style="font-size:12px">?</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes" data-tip="https://github.com/rdumasia303/Gemini_Claude_Earth">✓</span></td>
+      </tr>
+      <tr data-tags="free global islive conflict">
+        <td class="tool-cell">
+          <span class="sbadge sbadge-live">live</span>
+          <span class="tool-name"><a href="https://glint.trade/" target="_blank">Glint</a></span>
+          <span class="tool-scope">global</span>
+          <span class="best-for">Prediction market intelligence terminal for Polymarket</span>
+        </td>
+        <td><span class="badge badge-partial">Free, signup optional</span></td>
+        <td><span class="fresh-rt">Real-time</span><span style="color:#94a3b8;font-size:11px;display:block">(<30 seconds)</span></td>
+        <td><span class="trans-med" data-tip="Some sources named; others undisclosed">Medium</span></td>
+        <td><span class="sources-cell" data-tip="X/Twitter, Telegram channels, OSINT, ADS-B military aircraft, Polymarket">X/Twitter, Telegram channels, OSINT, ADS-B military aircr…</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+      </tr>
+      <tr data-tags="free global opensource repoonly transparent" class="row-dim">
+        <td class="tool-cell">
+          <span class="sbadge sbadge-repo">repo only</span>
+          <span class="tool-name"><a href="https://github.com/sgoudelis/ground-station" target="_blank">Ground Station</a></span>
+          <span class="tool-scope">global</span>
+          <span class="best-for">Satellite tracking + SDR radio — no geopolitical data; out of scope</span>
+        </td>
+        <td><span class="badge badge-free">Free, no signup</span></td>
+        <td><span class="fresh-rt">Real-time</span><span style="color:#94a3b8;font-size:11px;display:block">(SDR/satellite)</span></td>
+        <td><span class="trans-high" data-tip="All upstream sources named">High</span></td>
+        <td><span class="sources-cell" data-tip="SDR radio (hardware required), satellite orbital data">SDR radio (hardware required), satellite orbital data</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes" data-tip="https://github.com/sgoudelis/ground-station">✓</span></td>
+      </tr>
+      <tr data-tags="free global islive conflict">
+        <td class="tool-cell">
+          <span class="sbadge sbadge-live">live</span>
+          <span class="tool-name"><a href="https://hegemonglobal.com/" target="_blank">Hegemon</a></span>
+          <span class="tool-scope">global (198 countries)</span>
+          <span class="best-for">198 countries; AI country risk scoring (clear→catastrophic)</span>
+        </td>
+        <td><span class="badge badge-free">Free, no signup</span></td>
+        <td><span class="fresh-rt">Real-time</span></td>
+        <td><span class="trans-med" data-tip="Some sources named; others undisclosed">Medium</span></td>
+        <td><span class="sources-cell" data-tip="100+ news sources (Western, non-Western, state media)">100+ news sources (Western, non-Western, state media)</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+      </tr>
+      <tr data-tags="free global opensource api repoonly" class="row-dim">
+        <td class="tool-cell">
+          <span class="sbadge sbadge-repo">repo only</span>
+          <span class="tool-name"><a href="https://github.com/homanp/infinite-monitor" target="_blank">Infinite Monitor</a></span>
+          <span class="tool-scope">user-defined</span>
+          <span class="best-for">AI widget builder — not a pre-built monitoring tool</span>
+        </td>
+        <td><span class="badge badge-free">Free, no signup</span></td>
+        <td><span class="fresh-delayed">user-defined</span></td>
+        <td><span class="trans-low" data-tip="Sources not disclosed or count-only">Low</span></td>
+        <td><span class="sources-cell" data-tip="user-defined (AI builds custom widgets accessing any API or live web search)">user-defined (AI builds custom widgets accessing any API …</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span style="font-size:11px;color:#475569">iframe</span></td>
+        <td><span class="icon icon-yes" data-tip="https://github.com/homanp/infinite-monitor">✓</span></td>
+      </tr>
+      <tr data-tags="mideast islive transparent conflict">
+        <td class="tool-cell">
+          <span class="sbadge sbadge-live">live</span>
+          <span class="tool-name"><a href="https://www.iranmonitor.org/" target="_blank">Iran Monitor</a></span>
+          <span class="tool-scope">Iran/Middle East</span>
+          <span class="best-for">Iran/Middle East; IODA + OONI + Cloudflare Radar; aviation, maritime, Polymarket</span>
+        </td>
+        <td><span class="badge badge-partial">Free, signup optional</span></td>
+        <td><span class="fresh-rt">Real-time</span></td>
+        <td><span class="trans-high" data-tip="All upstream sources named">High</span></td>
+        <td><span class="sources-cell" data-tip="News API, X/Twitter, Polymarket, Live TV, AirNav Radar, MarineTraffic, GeoConfirmed, IODA, OONI, Cloudflare Radar">News API, X/Twitter, Polymarket, Live TV, AirNav Radar, M…</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+      </tr>
+      <tr data-tags="free api islive transparent conflict">
+        <td class="tool-cell">
+          <span class="sbadge sbadge-live">live</span>
+          <span class="tool-name"><a href="https://www.trendmoney.biz/iran-monitor" target="_blank">Iran Monitor (Trendmoney)</a></span>
+          <span class="tool-scope"></span>
+          <span class="best-for">Groq AI threat score; 100+ RSS feeds; 8 live news channels</span>
+        </td>
+        <td><span class="badge badge-partial">Free, signup optional</span></td>
+        <td><span class="fresh-rt">Real-time</span><span style="color:#94a3b8;font-size:11px;display:block">(Groq AI threat refreshes every 5 min)</span></td>
+        <td><span class="trans-high" data-tip="All upstream sources named">High</span></td>
+        <td><span class="sources-cell" data-tip="NewsAPI, RSS feeds (100+), Reddit, Telegram, Polymarket">NewsAPI, RSS feeds (100+), Reddit, Telegram, Polymarket</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span style="font-size:11px;color:#475569">RSS</span></td>
+        <td><span class="icon icon-no">—</span></td>
+      </tr>
+      <tr data-tags="free mideast islive conflict">
+        <td class="tool-cell">
+          <span class="sbadge sbadge-live">live</span>
+          <span class="tool-name"><a href="https://signalcockpit.com/" target="_blank">Iran Situation Monitoring</a></span>
+          <span class="tool-scope">Iran/Middle East</span>
+          <span class="best-for">Iran escalation signals: aviation, maritime, webcams, markets</span>
+        </td>
+        <td><span class="badge badge-free">Free, no signup</span></td>
+        <td><span class="fresh-rt">Real-time</span></td>
+        <td><span class="trans-med" data-tip="Some sources named; others undisclosed">Medium</span></td>
+        <td><span class="sources-cell" data-tip="aviation data, maritime data, OSINT, market data">aviation data, maritime data, OSINT, market data</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-unk">?</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+      </tr>
+      <tr data-tags="global opensource api islive transparent conflict">
+        <td class="tool-cell">
+          <span class="sbadge sbadge-live">live</span>
+          <span class="tool-name"><a href="https://liveuamap.com/" target="_blank">LiveUAMap</a></span>
+          <span class="tool-scope">global</span>
+          <span class="best-for">Human-verified OSINT events; social media + news sources; API, RSS, iframe access</span>
+        </td>
+        <td><span class="badge badge-paid">Paid / freemium</span></td>
+        <td><span class="fresh-rt">Real-time</span></td>
+        <td><span class="trans-high" data-tip="All upstream sources named">High</span></td>
+        <td><span class="sources-cell" data-tip="social media (X/Twitter, Facebook, Instagram, Telegram), open-source news outlets, OpenStreetMap">social media (X/Twitter, Facebook, Instagram, Telegram), …</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span style="font-size:11px;color:#475569">RSS, API, iframe</span></td>
+        <td><span class="icon icon-yes" data-tip="https://github.com/liveuamap/liveuamap">✓</span></td>
+      </tr>
+      <tr data-tags="free mideast islive conflict">
+        <td class="tool-cell">
+          <span class="sbadge sbadge-live">live</span>
+          <span class="tool-name"><a href="https://www.monitorlebanon.com/" target="_blank">Monitor Lebanon</a></span>
+          <span class="tool-scope">Lebanon / Middle East region</span>
+          <span class="best-for">Lebanon-focused situational awareness; minimal public info</span>
+        </td>
+        <td><span class="badge badge-partial">Free, signup optional</span></td>
+        <td><span class="fresh-rt">Real-time</span></td>
+        <td><span class="trans-low" data-tip="Sources not disclosed or count-only">Low</span></td>
+        <td><span class="sources-cell" data-tip="Telegram, X/Twitter">Telegram, X/Twitter</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+      </tr>
+      <tr data-tags="free global islive conflict">
+        <td class="tool-cell">
+          <span class="sbadge sbadge-live">live</span>
+          <span class="tool-name"><a href="https://monitor-the-situation.com/" target="_blank">Monitor the Situation</a></span>
+          <span class="tool-scope">global</span>
+          <span class="best-for">Reuters, BBC, AP, X/Twitter, ADS-B, AIS (40+ sources); live TV embeds; global</span>
+        </td>
+        <td><span class="badge badge-free">Free, no signup</span></td>
+        <td><span class="fresh-rt">Real-time</span></td>
+        <td><span class="trans-med" data-tip="Some sources named; others undisclosed">Medium</span></td>
+        <td><span class="sources-cell" data-tip="Reuters, BBC, AP, X/Twitter, ADS-B, AIS (40+ sources)">Reuters, BBC, AP, X/Twitter, ADS-B, AIS (40+ sources)</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+      </tr>
+      <tr data-tags="free global islive conflict">
+        <td class="tool-cell">
+          <span class="sbadge sbadge-live">live</span>
+          <span class="tool-name"><a href="https://monitorthesituations.com/" target="_blank">Monitor The Situations</a></span>
+          <span class="tool-scope">global</span>
+          <span class="best-for">News ticker + map view + flight radar + stock data; threat score</span>
+        </td>
+        <td><span class="badge badge-free">Free, no signup</span></td>
+        <td><span class="fresh-rt">Real-time</span></td>
+        <td><span class="trans-low" data-tip="Sources not disclosed or count-only">Low</span></td>
+        <td><span class="sources-cell" data-tip="flight radar, stock market data, breaking news, OSINT sources, military aircraft tracking">flight radar, stock market data, breaking news, OSINT sou…</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+      </tr>
+      <tr data-tags="free mideast opensource islive transparent conflict">
+        <td class="tool-cell">
+          <span class="sbadge sbadge-live">live</span>
+          <span class="tool-name"><a href="https://opepicfury.xyz/" target="_blank">Operation Epic Fury</a></span>
+          <span class="tool-scope">US, Israel, Iran</span>
+          <span class="best-for">US/Israel/Iran military capability comparison; GlobalFirepower, IISS, SIPRI, CENTCOM data</span>
+        </td>
+        <td><span class="badge badge-free">Free, no signup</span></td>
+        <td><span class="fresh-rt">Real-time</span></td>
+        <td><span class="trans-high" data-tip="All upstream sources named">High</span></td>
+        <td><span class="sources-cell" data-tip="GlobalFirepower 2026, IISS, SIPRI, IDF, CENTCOM, CSIS, X/Twitter, CNN, BBC">GlobalFirepower 2026, IISS, SIPRI, IDF, CENTCOM, CSIS, X/…</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes" data-tip="https://github.com/izak270/operation-epic-fury">✓</span></td>
+      </tr>
+      <tr data-tags="free global opensource repoonly transparent" class="row-dim">
+        <td class="tool-cell">
+          <span class="sbadge sbadge-repo">repo only</span>
+          <span class="tool-name"><a href="https://github.com/TannerTunstall/OSINT-Monitor" target="_blank">OSINT Monitor</a></span>
+          <span class="tool-scope">user-defined</span>
+          <span class="best-for">Telegram, Nitter/X, RSS, Cloudflare Radar; alert delivery to Discord, Slack, Signal, email</span>
+        </td>
+        <td><span class="badge badge-free">Free, no signup</span></td>
+        <td><span class="fresh-rt">Real-time</span></td>
+        <td><span class="trans-high" data-tip="All upstream sources named">High</span></td>
+        <td><span class="sources-cell" data-tip="Telegram (Telethon), Nitter/X (RSS), RSS/Atom feeds, Cloudflare Radar">Telegram (Telethon), Nitter/X (RSS), RSS/Atom, Cloudflare Radar</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes" data-tip="https://github.com/TannerTunstall/OSINT-Monitor">✓</span></td>
+      </tr>
+            <tr data-tags="global islive" class="">
+        <td class="tool-cell">
+          <span class="sbadge sbadge-live">live</span>
+          <span class="tool-name"><a href="https://osnt.io/" target="_blank">OSNT.io</a></span>
+          <span class="tool-scope">global</span>
+          <span class="best-for">Status unclear; showing 0 events at time of review</span>
+        </td>
+        <td><span class="badge badge-free">Free, no signup</span></td>
+        <td><span class="fresh-rt">Real-time</span><span style="color:#94a3b8;font-size:11px;display:block">(when operational)</span></td>
+        <td><span class="trans-low" data-tip="Sources not disclosed or count-only">Low</span></td>
+        <td><span class="sources-cell" data-tip="X/Twitter">X/Twitter</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+      </tr>
+      <tr data-tags="free global islive conflict">
+        <td class="tool-cell">
+          <span class="sbadge sbadge-live">live</span>
+          <span class="tool-name"><a href="https://pallasosint.com/" target="_blank">Pallasosint</a></span>
+          <span class="tool-scope">global</span>
+          <span class="best-for">AI geopolitical 3D globe; Daily Briefing requires signup</span>
+        </td>
+        <td><span class="badge badge-partial">Free, signup optional</span></td>
+        <td><span class="fresh-rt">Real-time</span></td>
+        <td><span class="trans-low" data-tip="Sources not disclosed or count-only">Low</span></td>
+        <td><span class="sources-cell" data-tip="Mainstream news, official government sources, think tanks">Mainstream news, govt sources, think tanks</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-unk">?</span></td>
+        <td><span class="icon icon-unk">?</span></td>
+        <td><span class="icon icon-unk">?</span></td>
+        <td><span class="icon icon-unk">?</span></td>
+        <td><span class="icon icon-unk">?</span></td>
+        <td><span class="icon icon-unk">?</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+      </tr>
+      <tr data-tags="global islive conflict">
+        <td class="tool-cell">
+          <span class="sbadge sbadge-live">live</span>
+          <span class="tool-name"><a href="https://www.pizzint.watch/polyglobe" target="_blank">Polyglobe / Pentagon Pizza Index</a></span>
+          <span class="tool-scope">global</span>
+          <span class="best-for">Polymarket on 3D globe + Pentagon Pizza satirical overlay</span>
+        </td>
+        <td><span class="badge badge-paid">Paid / freemium</span></td>
+        <td><span class="fresh-rt">Real-time</span></td>
+        <td><span class="trans-med" data-tip="Some sources named; others undisclosed">Medium</span></td>
+        <td><span class="sources-cell" data-tip="Polymarket, Google Maps Popular Times, NASA FIRMS, OSINT X/Twitter accounts, DeepStateLive (Ukraine frontlines), OpenStreetMap military base data">Polymarket, Google Maps Popular Times, NASA FIRMS, OSINT …</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+      </tr>
+      <tr data-tags="free global islive conflict">
+        <td class="tool-cell">
+          <span class="sbadge sbadge-live">live</span>
+          <span class="tool-name"><a href="https://pulseapps.org/" target="_blank">Pulse</a></span>
+          <span class="tool-scope">global</span>
+          <span class="best-for">Flight + seismic + prediction markets terminal</span>
+        </td>
+        <td><span class="badge badge-free">Free, no signup</span></td>
+        <td><span class="fresh-rt">Real-time</span></td>
+        <td><span class="trans-med" data-tip="Some sources named; others undisclosed">Medium</span></td>
+        <td><span class="sources-cell" data-tip="OpenSky (flights), USGS, NOAA, Kalshi, Polymarket, breaking news">OpenSky (flights), USGS, NOAA, Kalshi, Polymarket, breaki…</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+      </tr>
+      <tr data-tags="free global islive" class="">
+        <td class="tool-cell">
+          <span class="sbadge sbadge-live">live</span>
+          <span class="tool-name"><a href="https://pve.trade/" target="_blank">PVE.trade</a></span>
+          <span class="tool-scope">global</span>
+          <span class="best-for">Trade tracker; site content not accessible for assessment</span>
+        </td>
+        <td><span class="badge badge-partial">Free, signup optional</span></td>
+        <td><span class="fresh-rt">Real-time</span></td>
+        <td><span class="trans-low" data-tip="Sources not disclosed or count-only">Low</span></td>
+        <td><span class="sources-cell" data-tip="unknown">unknown</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+      </tr>
+      <tr data-tags="free global opensource repoonly transparent conflict" class="row-dim">
+        <td class="tool-cell">
+          <span class="sbadge sbadge-repo">repo only</span>
+          <span class="tool-name"><a href="https://github.com/BigBodyCobain/Shadowbroker" target="_blank">Shadowbroker</a></span>
+          <span class="tool-scope">global</span>
+          <span class="best-for">Self-hosted; OpenSky, AIS, GDELT, FIRMS, USGS, IODA, 11,000+ CCTV feeds</span>
+        </td>
+        <td><span class="badge badge-free">Free, no signup</span></td>
+        <td><span class="fresh-rt">Real-time</span><span style="color:#94a3b8;font-size:11px;display:block">(varies: AIS ; aircraft/satellites ~60s; fires/earthquakes ~60-120s; CCTV 5-10min; Ukraine frontline ~30min; GDELT ~6h)</span></td>
+        <td><span class="trans-high" data-tip="All upstream sources named">High</span></td>
+        <td><span class="sources-cell" data-tip="OpenSky Network, adsb.lol (military aircraft), aisstream.io AIS (25000+ vessels), Global Fishing Watch, CelesTrak TLE (2000+ satellites), N2YO, SatNOGS, GDELT, DeepState Map Ukraine frontline, Ukraine air raid alerts, NASA FIRMS, USGS earthquakes, NOAA space weather, IODA internet outages, 11000+ CCTV cameras, OpenMHZ radio, KiwiSDR, Shodan, Sentinel-2 via MS Planetary Computer, NASA GIBS MODIS, global markets ticker">OpenSky Network, adsb.lol (military aircraft), aisstream.…</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-unk">?</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes" data-tip="https://github.com/BigBodyCobain/Shadowbroker">✓</span></td>
+      </tr>
+      <tr data-tags="global islive conflict">
+        <td class="tool-cell">
+          <span class="sbadge sbadge-live">live</span>
+          <span class="tool-name"><a href="https://sitdeck.com/" target="_blank">Situation Deck</a></span>
+          <span class="tool-scope">global</span>
+          <span class="best-for">Largest provider count (180+); Claude AI analyst; 65+ map layers</span>
+        </td>
+        <td><span class="badge badge-paid">Paid / freemium</span></td>
+        <td><span class="fresh-rt">Real-time</span></td>
+        <td><span class="trans-low" data-tip="Sources not disclosed or count-only">Low</span></td>
+        <td><span class="sources-cell" data-tip="USGS, NOAA, NATO, CISA, ACLED, X/Twitter (180+ providers total)">USGS, NOAA, NATO, CISA, ACLED, X/Twitter (180+ providers …</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+      </tr>
+      <tr data-tags="free global islive conflict">
+        <td class="tool-cell">
+          <span class="sbadge sbadge-live">live</span>
+          <span class="tool-name"><a href="https://situationmonitor.info/" target="_blank">Situation Monitor</a></span>
+          <span class="tool-scope">global</span>
+          <span class="best-for">AI news intelligence; 395+ sources; 9 languages; no map</span>
+        </td>
+        <td><span class="badge badge-free">Free, no signup</span></td>
+        <td><span class="fresh-rt">Real-time</span></td>
+        <td><span class="trans-low" data-tip="Sources not disclosed or count-only">Low</span></td>
+        <td><span class="sources-cell" data-tip="395+ news sources across 50+ countries (9 languages)">395+ news sources across 50+ countries (9 languages)</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+      </tr>
+      <tr data-tags="free global islive conflict">
+        <td class="tool-cell">
+          <span class="sbadge sbadge-live">live</span>
+          <span class="tool-name"><a href="https://situationroom.io/" target="_blank">Situation Room</a></span>
+          <span class="tool-scope">global</span>
+          <span class="best-for">Military aircraft + vessels + cyber threats on live OSINT map</span>
+        </td>
+        <td><span class="badge badge-free">Free, no signup</span></td>
+        <td><span class="fresh-rt">Real-time</span></td>
+        <td><span class="trans-med" data-tip="Some sources named; others undisclosed">Medium</span></td>
+        <td><span class="sources-cell" data-tip="Al Jazeera, The Guardian, BBC, X/Twitter">Al Jazeera, The Guardian, BBC, X/Twitter</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+      </tr>
+      <tr data-tags="mideast islive" class="">
+        <td class="tool-cell">
+          <span class="sbadge sbadge-live">live</span>
+          <span class="tool-name"><a href="https://socradar.io/iran-israel-cyber-conflict-dashboard/" target="_blank">SOCRadar Cyber Dashboard</a></span>
+          <span class="tool-scope">Iran-Israel (regional)</span>
+          <span class="best-for">Iran-Israel cyber conflict; APT + hacktivist tracking; daily updates</span>
+        </td>
+        <td><span class="badge badge-paid">Paid / freemium</span></td>
+        <td><span class="fresh-rt">Real-time</span></td>
+        <td><span class="trans-low" data-tip="Sources not disclosed or count-only">Low</span></td>
+        <td><span class="sources-cell" data-tip="Telegram, SOCRadar Intelligence">Telegram, SOCRadar Intelligence</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+      </tr>
+      <tr data-tags="free mideast api islive transparent conflict">
+        <td class="tool-cell">
+          <span class="sbadge sbadge-live">live</span>
+          <span class="tool-name"><a href="https://iran-hormuz-oil.vercel.app/" target="_blank">Strait of Hormuz Impact</a></span>
+          <span class="tool-scope">Middle East / Strait of Hormuz region</span>
+          <span class="best-for">Oil markets + Hormuz disruption scenarios + military bases</span>
+        </td>
+        <td><span class="badge badge-free">Free, no signup</span></td>
+        <td><span class="fresh-rt">Real-time</span></td>
+        <td><span class="trans-high" data-tip="All upstream sources named">High</span></td>
+        <td><span class="sources-cell" data-tip="EIA, IEA, Vortexa, S&amp;P Global Platts, Lloyd&#x27;s, ONI, AP, Reuters, Al Jazeera, Yahoo Finance, NASA FIRMS, OpenStreetMap, live RSS">EIA, IEA, Vortexa, S&amp;P Global Platts, Lloyd&#x27;s, ONI, AP, R…</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span style="font-size:11px;color:#475569">RSS</span></td>
+        <td><span class="icon icon-no">—</span></td>
+      </tr>
+      <tr data-tags="free global islive conflict">
+        <td class="tool-cell">
+          <span class="sbadge sbadge-live">live</span>
+          <span class="tool-name"><a href="https://warheatmap.app/" target="_blank">War Heat Map</a></span>
+          <span class="tool-scope">global</span>
+          <span class="best-for">CC BY 4.0; OSINT aggregation via X/Twitter, Telegram, USNI Fleet Tracker; 1,000+ events</span>
+        </td>
+        <td><span class="badge badge-free">Free, no signup</span></td>
+        <td><span class="fresh-rt">Real-time</span><span style="color:#94a3b8;font-size:11px;display:block">(events); weekly (naval positions)</span></td>
+        <td><span class="trans-med" data-tip="Some sources named; others undisclosed">Medium</span></td>
+        <td><span class="sources-cell" data-tip="OSINT aggregation (X/Twitter, Telegram, verified conflict reports, USNI Fleet Tracker)">OSINT aggregation (X/Twitter, Telegram, verified conflict…</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+      </tr>
+      <tr data-tags="free global opensource repoonly transparent conflict" class="row-dim">
+        <td class="tool-cell">
+          <span class="sbadge sbadge-repo">repo only</span>
+          <span class="tool-name"><a href="https://github.com/lajosdeme/watchtower" target="_blank">Watchtower</a></span>
+          <span class="tool-scope">global</span>
+          <span class="best-for">Self-hosted RSS news aggregator + Groq AI summarization</span>
+        </td>
+        <td><span class="badge badge-free">Free, no signup</span></td>
+        <td><span class="fresh-rt">Real-time</span></td>
+        <td><span class="trans-high" data-tip="All upstream sources named">High</span></td>
+        <td><span class="sources-cell" data-tip="Reuters, BBC, AP, Al Jazeera (RSS); optional Groq LLM">Reuters, BBC, AP, Al Jazeera (RSS); optional Groq LLM</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes" data-tip="https://github.com/lajosdeme/watchtower">✓</span></td>
+      </tr>
+      <tr data-tags="global opensource islive transparent conflict">
+        <td class="tool-cell">
+          <span class="sbadge sbadge-live">live + repo</span>
+          <span class="tool-name"><a href="https://www.worldmonitor.app/" target="_blank">World Monitor</a></span>
+          <span class="tool-scope">global</span>
+          <span class="best-for">ACLED, GDELT, OpenSky, AIS, Yahoo Finance, WHO; AI situation reports; open-source</span>
+        </td>
+        <td><span class="badge badge-signup">Free, signup req.</span></td>
+        <td><span class="fresh-rt">Real-time</span></td>
+        <td><span class="trans-high" data-tip="All upstream sources named">High</span></td>
+        <td><span class="sources-cell" data-tip="ACLED, FRED, Yahoo Finance, OpenSky, AIS, GDELT, WHO, oil analytics, Wingbits ADS-B">ACLED, FRED, Yahoo Finance, OpenSky, AIS, GDELT, WHO, oil…</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes" data-tip="https://github.com/koala73/worldmonitor">✓</span></td>
+      </tr>
+      <tr data-tags="free global islive conflict">
+        <td class="tool-cell">
+          <span class="sbadge sbadge-live">live</span>
+          <span class="tool-name"><a href="https://worldwatch.uk/" target="_blank">World Watch</a></span>
+          <span class="tool-scope">global</span>
+          <span class="best-for">Global OSINT; Epstein network viz; DDoS + missile range tools</span>
+        </td>
+        <td><span class="badge badge-partial">Free, signup optional</span></td>
+        <td><span class="fresh-rt">Real-time</span></td>
+        <td><span class="trans-med" data-tip="Some sources named; others undisclosed">Medium</span></td>
+        <td><span class="sources-cell" data-tip="ACLED, GDELT, ADS-B, AIS, USGS, NOAA, Yahoo Finance, X/Twitter, OpenStreetMap">ACLED, GDELT, ADS-B, AIS, USGS, NOAA, Yahoo Finance, X/Tw…</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+      </tr>
+      <tr data-tags="free islive conflict">
+        <td class="tool-cell">
+          <span class="sbadge sbadge-live">live</span>
+          <span class="tool-name"><a href="https://schizopunk-media.neocities.org/?z=/WWO" target="_blank">World Watch One</a></span>
+          <span class="tool-scope">global</span>
+          <span class="best-for">Telegram, satellite imagery, USGS, Google News, RSS; includes map view</span>
+        </td>
+        <td><span class="badge badge-free">Free, no signup</span></td>
+        <td><span class="fresh-rt">Real-time</span></td>
+        <td><span class="trans-med" data-tip="Some sources named; others undisclosed">Medium</span></td>
+        <td><span class="sources-cell" data-tip="Telegram, satellite imagery, USGS, Google News, RSS">Telegram, satellite imagery, USGS, Google News, RSS</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+      </tr>
+      <tr data-tags="free global api isunclear" class="row-dim">
+        <td class="tool-cell">
+          <span class="sbadge sbadge-proto">prototype</span>
+          <span class="tool-name"><a href="https://www.spatialintelligence.ai/p/i-built-a-spy-satellite-simulator" target="_blank">WorldView (Spatial Intelligence)</a></span>
+          <span class="tool-scope">global (space/satellite simulation)</span>
+          <span class="best-for">Prototype only — full app launch pending</span>
+        </td>
+        <td><span class="badge badge-free">Free, no signup</span></td>
+        <td><span class="icon-unk" style="font-size:12px">?</span></td>
+        <td><span class="trans-low" data-tip="Sources not disclosed or count-only">Low</span></td>
+        <td><span class="sources-cell" data-tip="Google 3D Tiles, OpenSky Network, ADS-B Exchange, CelesTrak TLE, public CCTV feeds (prototype data sources)">Google 3D Tiles, OpenSky Network, ADS-B Exchange, CelesTr…</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span class="icon icon-yes">✓</span></td>
+        <td><span class="icon icon-no">—</span></td>
+        <td><span style="font-size:11px;color:#475569">RSS</span></td>
+        <td><span class="icon icon-no">—</span></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="legend">
+    <span class="legend-item"><span class="icon-yes" style="font-size:13px">✓</span> Yes</span>
+    <span class="legend-item"><span class="icon-part" style="font-size:13px">~</span> Partial / conditional</span>
+    <span class="legend-item"><span class="icon-no" style="font-size:13px">—</span> No</span>
+    <span class="legend-item"><span class="icon-unk" style="font-size:13px">?</span> Unknown</span>
+    <span class="legend-item"><span class="trans-high" style="font-size:11px">High</span> source transparency = all upstream sources named</span>
+    <span class="legend-item"><span class="trans-low" style="font-size:11px">Low</span> = not disclosed</span>
+    <span class="legend-item">Dimmed rows = unclear status, repo-only, or out of scope</span>
+  </div>
+  <div class="footnote">
+    Research by Indicator in collaboration with Claude Code. Data as of April 2026.
+  </div>
+</div>
+<script>
+  // Filter buttons
+  const rows = Array.from(document.querySelectorAll('#chart tbody tr'));
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const filter = btn.dataset.filter;
+      rows.forEach(row => {
+        if (filter === 'all') { row.classList.remove('hidden'); }
+        else {
+          const tags = (row.dataset.tags || '').split(' ');
+          row.classList.toggle('hidden', !tags.includes(filter));
+        }
+      });
+      window.parent.postMessage({ iframeHeight: document.body.scrollHeight }, '*');
+    });
+  });
+  window.addEventListener('load', () => {
+    window.parent.postMessage({ iframeHeight: document.body.scrollHeight }, '*');
+  });
+
+  // Sticky header — JS clone approach (reliable cross-browser)
+  const tableScroll = document.querySelector('.table-scroll');
+  const realThead = document.querySelector('#chart thead');
+
+  // Build clone container
+  const clone = document.createElement('div');
+  clone.className = 'sticky-header-clone';
+  const cloneTable = document.createElement('table');
+  cloneTable.appendChild(realThead.cloneNode(true));
+  clone.appendChild(cloneTable);
+  document.body.appendChild(clone);
+
+  function syncClone() {
+    const scrollRect = tableScroll.getBoundingClientRect();
+    const theadRect = realThead.getBoundingClientRect();
+
+    // Show clone when original thead has scrolled above viewport
+    if (theadRect.bottom < 0) {
+      clone.style.display = 'block';
+      // Align clone with scroll container's left/right edges
+      clone.style.left = scrollRect.left + 'px';
+      clone.style.right = (window.innerWidth - scrollRect.right) + 'px';
+      // Sync horizontal scroll
+      cloneTable.style.marginLeft = -tableScroll.scrollLeft + 'px';
+      // Match each column width
+      const realCells = realThead.querySelectorAll('th');
+      const cloneCells = clone.querySelectorAll('th');
+      realCells.forEach((th, i) => {
+        cloneCells[i].style.width = th.offsetWidth + 'px';
+        cloneCells[i].style.minWidth = th.offsetWidth + 'px';
+      });
+    } else {
+      clone.style.display = 'none';
+    }
+  }
+
+  window.addEventListener('scroll', syncClone);
+  tableScroll.addEventListener('scroll', syncClone);
+  window.addEventListener('resize', syncClone);
+</script>
+</body>
+</html>
